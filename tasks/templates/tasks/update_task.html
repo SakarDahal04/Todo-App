@@ -1,0 +1,11 @@
+{% csrf_token %}
+<div class="mb-3">
+  <label for="id_title" class="form-label" style="color: red;">Title:</label>
+  {{ form.title }}
+</div>
+<div class="mb-3 form-check">
+  {{ form.status }}
+  <label for="id_status" class="form-check-label">Completed</label>
+</div>
+<input type="hidden" name="task_id" value="{{ task.id }}">
+<button type="submit" class="btn btn-primary">Update</button>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo Website</title>
+
+    
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <div class="center-column">
+      <div class="top-title">
+        <h2>TODO Lists:</h2>
+      </div>
+
+      <form action="/" method="POST">
+        {% csrf_token %}
+        <div class="mb-3" style="width: 100%;">{{form.title}}</div>
+        <button class="submit-btn btn btn-info" type="submit">
+          Create Task
+        </button>
+      </form>
+
+      <div class="todo-list">
+        {% for task in tasks %}
+        <div class="item-row">
+          <div class="todo-tasks">
+            {% if task.status == True %}
+            <strike>{{task.title}}</strike>
+            {% else %}
+            <span>{{task.title}}</span>
+            {% endif %}
+          </div>
+
+          <div class="todo-change">
+            <button
+              class="btn btn-sm btn-success edit-btn"
+              data-task-id="{{task.id}}"
+              type="button"
+            >
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+
+            <button
+              class="btn btn-sm btn-danger delete-btn"
+              data-task-id="{{task.id}}"
+              data-task-title="{{task.title}}"
+              type="button"
+            >
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div
+      class="modal fade"
+      id="editModal"
+      tabindex="-1"
+      aria-labelledby="editModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editModalLabel">Edit Task</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="edit-task-form" method="POST" action="/update_task/">
+              <!-- Form content will be loaded here -->
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div
+      class="modal fade"
+      id="deleteModal"
+      tabindex="-1"
+      aria-labelledby="deleteModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Delete Task</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to delete this task?</p>
+            <p id="task-to-delete"></p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <form id="delete-task-form" method="POST">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get all edit buttons
+        const editButtons = document.querySelectorAll(".edit-btn");
+        const deleteButtons = document.querySelectorAll(".delete-btn");
+
+        // Add click event listener to each edit button
+        editButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            const taskId = this.dataset.taskId; // this retrieve the value of data-task-id
+            console.log("Task ID:", taskId); // Debug output
+
+            // Show the modal
+            const modal = new bootstrap.Modal(
+              document.getElementById("editModal")
+            );
+            modal.show();
+
+            // Fetch the update form
+            fetch(`/update_task?id=${taskId}`)
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error(
+                    "Network response was not ok: " + response.status
+                  );
+                }
+                return response.text(); // this will receive the HTML content from the form
+              })
+              .then((html) => {
+                console.log(html);
+                document.getElementById("edit-task-form").innerHTML = html;
+              })
+              .catch((error) => {
+                console.error("Error loading form:", error);
+                document.getElementById(
+                  "edit-task-form"
+                ).innerHTML = `<div class="alert alert-danger">Error loading task: ${error.message}</div>`;
+              });
+          });
+        });
+
+        deleteButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            const taskId = this.dataset.taskId;
+            const taskTitle = this.dataset.taskTitle;
+
+            // Show the task title in the modal
+            document.getElementById(
+              "task-to-delete"
+            ).textContent = `"${taskTitle}"`;
+
+            // Set the form action dynamically
+            const deleteForm = document.getElementById("delete-task-form");
+            deleteForm.action = `/delete_task/${taskId}/`;
+
+            // Show the modal
+            const modal = new bootstrap.Modal(
+              document.getElementById("deleteModal")
+            );
+            modal.show();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
